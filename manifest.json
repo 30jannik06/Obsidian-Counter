@@ -1,6 +1,6 @@
 {
   "id": "custom-counter",
-  "name": "Counter",
+  "name": "Custom Counter",
   "version": "1.0.0",
   "minAppVersion": "1.4.0",
   "description": "Simple tally counters in the sidebar — like a lap counter, for anything you want to track.",
