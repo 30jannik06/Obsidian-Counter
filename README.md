@@ -2,6 +2,10 @@
 
 Simple tally counters in the right sidebar — like the lap counters runners used to click at the track. Add as many as you want, each with its own name, count, and step size.
 
+![Counter plugin sidebar panel](docs/assets/screenshot.png)
+
+Docs & download: https://30jannik06.github.io/Obsidian-Counter/
+
 ## Install (manual / dev)
 
 1. `npm install`

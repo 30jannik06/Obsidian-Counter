@@ -198,6 +198,15 @@
       font-family: 'JetBrains Mono', monospace;
     }
 
+    .demo-screenshot {
+      display: block;
+      width: 100%;
+      max-width: 320px;
+      margin: 0 auto;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+
     .demo-header-row {
       display: flex;
       align-items: center;
@@ -617,44 +626,7 @@
       <span>Counter — Obsidian</span>
     </div>
     <div class="demo-body">
-      <div class="demo-header-row">
-        <span class="demo-panel-title">Counters</span>
-        <span class="demo-add-btn">+ Add counter</span>
-      </div>
-
-      <div class="demo-card">
-        <div class="demo-card-title-row">
-          <span class="demo-drag">⠿</span>
-          <span class="demo-card-title">Push-ups today</span>
-          <span class="demo-close">✕</span>
-        </div>
-        <div class="demo-count">24</div>
-        <div class="demo-btn-row">
-          <div class="demo-btn">−</div>
-          <div class="demo-btn plus">+</div>
-          <div class="demo-btn reset">⟲</div>
-        </div>
-      </div>
-
-      <div class="demo-card auto">
-        <div class="demo-card-title-row">
-          <span class="demo-drag">⠿</span>
-          <span class="demo-card-title">Writing streak</span>
-          <span class="demo-close">✕</span>
-        </div>
-        <span class="demo-badge">Day streak (notes created)</span>
-        <div class="demo-count">7</div>
-      </div>
-
-      <div class="demo-card auto">
-        <div class="demo-card-title-row">
-          <span class="demo-drag">⠿</span>
-          <span class="demo-card-title">Vault size</span>
-          <span class="demo-close">✕</span>
-        </div>
-        <span class="demo-badge">Notes in vault</span>
-        <div class="demo-count">312</div>
-      </div>
+      <img class="demo-screenshot" src="assets/screenshot.png" alt="Counter plugin sidebar panel showing a manual Coffee Cups counter and automatic Notes, Links in Vault, and Daily Streak counters" />
     </div>
   </div>
 </div>
