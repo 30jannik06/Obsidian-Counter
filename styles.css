@@ -45,6 +45,26 @@
 	align-items: center;
 	justify-content: space-between;
 	margin-bottom: 4px;
+	gap: 4px;
+}
+
+.counter-drag-handle {
+	cursor: grab;
+	color: var(--text-faint);
+	font-size: 0.9em;
+	flex: 0 0 auto;
+}
+
+.counter-card[draggable="true"] {
+	transition: opacity 0.15s ease, border-color 0.15s ease;
+}
+
+.counter-dragging {
+	opacity: 0.4;
+}
+
+.counter-drag-over {
+	border-color: var(--interactive-accent);
 }
 
 .counter-card-title {

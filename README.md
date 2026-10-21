@@ -18,3 +18,17 @@ Simple tally counters in the right sidebar — like the lap counters runners use
 - ⟲ resets a counter to 0.
 
 Everything is saved automatically to the plugin's data file.
+
+### Automatic counters
+
+Instead of manual, pick "Automatic" when adding a counter to track a live vault stat instead: notes in vault, total links, tags used, attachments, or a day-streak of note creation. These update themselves when the vault changes — no clicking needed.
+
+### Reordering
+
+Drag a card by its `⠿` handle to reorder counters.
+
+## Releasing a new version
+
+1. Bump `version` in `package.json`, then run `npm run version` (updates `manifest.json` and `versions.json` to match, via `version-bump.mjs`).
+2. Commit, then tag the commit with the version number (e.g. `git tag 1.1.0 && git push --tags`).
+3. The `.github/workflows/release.yml` workflow builds the plugin and publishes a GitHub release with `main.js`, `manifest.json`, and `styles.css` attached — ready for manual install or BRAT.

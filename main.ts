@@ -3,13 +3,14 @@ import { App, ItemView, Plugin, WorkspaceLeaf, Modal, Setting, Notice, TFile } f
 const VIEW_TYPE_COUNTER = "counter-view";
 
 type CounterMode = "manual" | "auto";
-type AutoMetric = "notes" | "links" | "tags" | "attachments";
+type AutoMetric = "notes" | "links" | "tags" | "attachments" | "streak";
 
 const AUTO_METRIC_LABELS: Record<AutoMetric, string> = {
 	notes: "Notes in vault",
 	links: "Links in vault",
 	tags: "Tags used (total)",
 	attachments: "Attachments in vault",
+	streak: "Day streak (notes created)",
 };
 
 interface CounterItem {
@@ -55,6 +56,24 @@ function computeAutoValue(app: App, metric: AutoMetric | undefined): number {
 		case "attachments": {
 			const all = app.vault.getFiles().filter((f): f is TFile => f instanceof TFile);
 			return all.length - app.vault.getMarkdownFiles().length;
+		}
+		case "streak": {
+			const days = new Set<string>();
+			for (const file of app.vault.getMarkdownFiles()) {
+				days.add(new Date(file.stat.ctime).toDateString());
+			}
+			const cursor = new Date();
+			cursor.setHours(0, 0, 0, 0);
+			if (!days.has(cursor.toDateString())) {
+				// Today has no new note yet - that alone shouldn't break the streak.
+				cursor.setDate(cursor.getDate() - 1);
+			}
+			let streak = 0;
+			while (days.has(cursor.toDateString())) {
+				streak++;
+				cursor.setDate(cursor.getDate() - 1);
+			}
+			return streak;
 		}
 		default:
 			return 0;
@@ -260,11 +279,53 @@ class CounterView extends ItemView {
 		}
 	}
 
+	makeDraggable(card: HTMLElement, counter: CounterItem) {
+		card.setAttribute("draggable", "true");
+
+		card.addEventListener("dragstart", (evt) => {
+			evt.dataTransfer?.setData("text/plain", counter.id);
+			card.addClass("counter-dragging");
+		});
+
+		card.addEventListener("dragend", () => {
+			card.removeClass("counter-dragging");
+		});
+
+		card.addEventListener("dragover", (evt) => {
+			evt.preventDefault();
+			card.addClass("counter-drag-over");
+		});
+
+		card.addEventListener("dragleave", () => {
+			card.removeClass("counter-drag-over");
+		});
+
+		card.addEventListener("drop", async (evt) => {
+			evt.preventDefault();
+			card.removeClass("counter-drag-over");
+			const draggedId = evt.dataTransfer?.getData("text/plain");
+			if (!draggedId || draggedId === counter.id) return;
+
+			const counters = this.plugin.settings.counters;
+			const fromIndex = counters.findIndex((c) => c.id === draggedId);
+			const toIndex = counters.findIndex((c) => c.id === counter.id);
+			if (fromIndex === -1 || toIndex === -1) return;
+
+			const [moved] = counters.splice(fromIndex, 1);
+			counters.splice(toIndex, 0, moved);
+			await this.plugin.saveSettings();
+			this.render();
+		});
+	}
+
 	renderCounterCard(parent: HTMLElement, counter: CounterItem) {
 		const card = parent.createDiv({ cls: "counter-card" });
 		if (counter.mode === "auto") card.addClass("counter-card-auto");
+		this.makeDraggable(card, counter);
 
 		const titleRow = card.createDiv({ cls: "counter-card-title-row" });
+		const dragHandle = titleRow.createEl("span", { cls: "counter-drag-handle", text: "⠿" });
+		dragHandle.setAttribute("aria-label", "Drag to reorder");
 		const title = titleRow.createEl("span", { cls: "counter-card-title", text: counter.name });
 		title.addEventListener("click", () => {
 			new NameModal(this.app, counter.name, "Rename counter", async (name) => {
