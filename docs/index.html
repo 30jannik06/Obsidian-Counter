@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Counter — Obsidian Plugin</title>
+  <meta name="description" content="Simple tally counters in the Obsidian sidebar — manual tap counters or live automatic vault stats." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d1117;
+      --bg-card: #161b22;
+      --bg-code: #1a2030;
+      --border: #30363d;
+      --accent: #7c3aed;
+      --accent-light: #a78bfa;
+      --text: #e6edf3;
+      --text-muted: #8b949e;
+      --green: #3fb950;
+      --radius: 10px;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    a { color: var(--accent-light); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ── Nav ── */
+    nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 32px;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      background: rgba(13, 17, 23, 0.85);
+      backdrop-filter: blur(12px);
+      z-index: 100;
+    }
+
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 600;
+      font-size: 1rem;
+      color: var(--text);
+    }
+
+    .nav-logo svg { color: var(--accent-light); }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      list-style: none;
+    }
+
+    .nav-links a {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      transition: color 0.15s;
+    }
+
+    .nav-links a:hover { color: var(--text); text-decoration: none; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 18px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+      border: none;
+      text-decoration: none;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+    .btn-primary:hover { background: #6d28d9; text-decoration: none; }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-secondary:hover { background: var(--bg-card); text-decoration: none; }
+
+    /* ── Hero ── */
+    .hero {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 100px 32px 80px;
+      text-align: center;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 28px;
+    }
+
+    .hero-badge span { color: var(--green); }
+
+    h1 {
+      font-size: clamp(2.4rem, 5vw, 3.6rem);
+      font-weight: 700;
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+      margin-bottom: 20px;
+    }
+
+    h1 em {
+      font-style: normal;
+      background: linear-gradient(135deg, #a78bfa, #7c3aed);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-sub {
+      font-size: 1.15rem;
+      color: var(--text-muted);
+      max-width: 560px;
+      margin: 0 auto 40px;
+    }
+
+    .hero-actions {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    /* ── Demo ── */
+    .demo {
+      max-width: 780px;
+      margin: 0 auto 80px;
+      padding: 0 32px;
+    }
+
+    .demo-window {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    }
+
+    .demo-titlebar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      background: #0d1117;
+    }
+
+    .dot { width: 12px; height: 12px; border-radius: 50%; }
+    .dot-red { background: #ff5f57; }
+    .dot-yellow { background: #febc2e; }
+    .dot-green { background: #28c840; }
+
+    .demo-titlebar span {
+      margin-left: 8px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .demo-body {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .demo-header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 4px;
+    }
+
+    .demo-panel-title {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .demo-add-btn {
+      font-size: 0.7rem;
+      padding: 3px 10px;
+      border-radius: 6px;
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .demo-card {
+      background: var(--bg-code);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+    }
+
+    .demo-card.auto { border-style: dashed; }
+
+    .demo-card-title-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 4px;
+    }
+
+    .demo-drag {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+
+    .demo-card-title {
+      font-weight: 600;
+      font-size: 0.85rem;
+      flex: 1;
+    }
+
+    .demo-close {
+      color: var(--text-muted);
+      font-size: 0.75rem;
+    }
+
+    .demo-badge {
+      display: inline-block;
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      background: var(--border);
+      border-radius: 5px;
+      padding: 1px 6px;
+      margin-bottom: 6px;
+    }
+
+    .demo-count {
+      text-align: center;
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin: 4px 0;
+    }
+
+    .demo-btn-row {
+      display: flex;
+      gap: 6px;
+      justify-content: center;
+      margin-top: 4px;
+    }
+
+    .demo-btn {
+      flex: 1;
+      text-align: center;
+      font-size: 0.95rem;
+      padding: 5px 0;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: #0d1117;
+      color: var(--text);
+    }
+
+    .demo-btn.plus {
+      background: var(--accent);
+      color: #fff;
+      font-weight: 700;
+    }
+
+    .demo-btn.reset {
+      flex: 0 0 32px;
+    }
+
+    /* ── Features ── */
+    section { max-width: 900px; margin: 0 auto; padding: 0 32px 80px; }
+
+    .section-label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent-light);
+      margin-bottom: 12px;
+    }
+
+    h2 {
+      font-size: clamp(1.6rem, 3vw, 2.2rem);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 40px;
+    }
+
+    .features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+    }
+
+    .feature-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      transition: border-color 0.2s;
+    }
+
+    .feature-card:hover { border-color: var(--accent); }
+
+    .feature-icon {
+      width: 38px;
+      height: 38px;
+      background: rgba(124, 58, 237, 0.12);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 14px;
+      color: var(--accent-light);
+    }
+
+    .feature-card h3 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .feature-card p {
+      font-size: 0.87rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* ── Metrics ── */
+    .styles-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+    }
+
+    .style-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      transition: border-color 0.2s;
+      padding: 18px;
+    }
+
+    .style-card:hover { border-color: var(--accent); }
+
+    .style-name {
+      font-weight: 600;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .style-tag {
+      font-size: 0.7rem;
+      padding: 2px 8px;
+      border-radius: 20px;
+      background: rgba(124, 58, 237, 0.15);
+      color: var(--accent-light);
+      border: 1px solid rgba(124, 58, 237, 0.3);
+    }
+
+    .style-desc {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    /* ── Install ── */
+    .install-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    @media (max-width: 600px) { .install-grid { grid-template-columns: 1fr; } }
+
+    .install-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+    }
+
+    .install-card h3 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .tag {
+      font-size: 0.7rem;
+      padding: 2px 8px;
+      border-radius: 20px;
+      background: rgba(63, 185, 80, 0.12);
+      color: var(--green);
+      border: 1px solid rgba(63, 185, 80, 0.3);
+    }
+
+    .install-card ol, .install-card ul {
+      padding-left: 18px;
+      font-size: 0.87rem;
+      color: var(--text-muted);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .install-card code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem;
+      background: var(--bg-code);
+      padding: 1px 6px;
+      border-radius: 4px;
+      color: var(--text);
+    }
+
+    /* ── Dev ── */
+    .code-block {
+      background: var(--bg-code);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem;
+      line-height: 1.8;
+      overflow-x: auto;
+    }
+
+    .code-block .comment { color: #6a9955; }
+    .code-block .cmd { color: var(--accent-light); }
+    .code-block .arg { color: #ce9178; }
+
+    /* ── Changelog ── */
+    .changelog { max-width: 720px; }
+
+    .changelog-release {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+
+    .changelog-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .changelog-version {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+      font-size: 1rem;
+      color: var(--accent-light);
+    }
+
+    .changelog-date {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .changelog-tag {
+      margin-left: auto;
+      font-size: 0.7rem;
+      padding: 2px 8px;
+      border-radius: 20px;
+      background: rgba(63, 185, 80, 0.12);
+      color: var(--green);
+      border: 1px solid rgba(63, 185, 80, 0.3);
+    }
+
+    .changelog-body {
+      padding: 16px 20px;
+    }
+
+    .changelog-group {
+      margin-bottom: 12px;
+    }
+
+    .changelog-group:last-child { margin-bottom: 0; }
+
+    .changelog-group-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .changelog-items {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .changelog-items li {
+      font-size: 0.87rem;
+      color: var(--text-muted);
+      display: flex;
+      gap: 8px;
+    }
+
+    .changelog-items li::before {
+      content: "·";
+      color: var(--accent-light);
+      flex-shrink: 0;
+    }
+
+    /* ── Footer ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 32px;
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    footer a { color: var(--text-muted); }
+    footer a:hover { color: var(--text); }
+
+    @media (max-width: 640px) {
+      nav { padding: 12px 16px; }
+      .hero { padding: 60px 16px 60px; }
+      .demo, section { padding-left: 16px; padding-right: 16px; }
+      .nav-links { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+    Counter
+  </div>
+  <ul class="nav-links">
+    <li><a href="#features">Features</a></li>
+    <li><a href="#metrics">Auto metrics</a></li>
+    <li><a href="#install">Installation</a></li>
+    <li><a href="#dev">Development</a></li>
+    <li><a href="#changelog">Changelog</a></li>
+    <li><a href="https://github.com/30jannik06/Obsidian-Counter">GitHub</a></li>
+  </ul>
+  <a class="btn btn-primary" href="https://github.com/30jannik06/Obsidian-Counter/releases/latest">
+    Download
+  </a>
+</nav>
+
+<div class="hero">
+  <div class="hero-badge">
+    <span>●</span> Obsidian Plugin &nbsp;·&nbsp; v1.0.0 &nbsp;·&nbsp; Free & Open Source
+  </div>
+  <h1>Tally counters<br />for your <em>vault</em></h1>
+  <p class="hero-sub">
+    Add as many tap counters as you want in the sidebar — or let them
+    track your vault automatically: notes, links, tags, or your
+    daily streak.
+  </p>
+  <div class="hero-actions">
+    <a class="btn btn-primary" href="https://github.com/30jannik06/Obsidian-Counter/releases/latest">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Download latest
+    </a>
+    <a class="btn btn-secondary" href="https://github.com/30jannik06/Obsidian-Counter">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0 0 22 12.017C22 6.484 17.522 2 12 2z"/></svg>
+      View on GitHub
+    </a>
+  </div>
+</div>
+
+<!-- Demo window -->
+<div class="demo">
+  <div class="demo-window">
+    <div class="demo-titlebar">
+      <div class="dot dot-red"></div>
+      <div class="dot dot-yellow"></div>
+      <div class="dot dot-green"></div>
+      <span>Counter — Obsidian</span>
+    </div>
+    <div class="demo-body">
+      <div class="demo-header-row">
+        <span class="demo-panel-title">Counters</span>
+        <span class="demo-add-btn">+ Add counter</span>
+      </div>
+
+      <div class="demo-card">
+        <div class="demo-card-title-row">
+          <span class="demo-drag">⠿</span>
+          <span class="demo-card-title">Push-ups today</span>
+          <span class="demo-close">✕</span>
+        </div>
+        <div class="demo-count">24</div>
+        <div class="demo-btn-row">
+          <div class="demo-btn">−</div>
+          <div class="demo-btn plus">+</div>
+          <div class="demo-btn reset">⟲</div>
+        </div>
+      </div>
+
+      <div class="demo-card auto">
+        <div class="demo-card-title-row">
+          <span class="demo-drag">⠿</span>
+          <span class="demo-card-title">Writing streak</span>
+          <span class="demo-close">✕</span>
+        </div>
+        <span class="demo-badge">Day streak (notes created)</span>
+        <div class="demo-count">7</div>
+      </div>
+
+      <div class="demo-card auto">
+        <div class="demo-card-title-row">
+          <span class="demo-drag">⠿</span>
+          <span class="demo-card-title">Vault size</span>
+          <span class="demo-close">✕</span>
+        </div>
+        <span class="demo-badge">Notes in vault</span>
+        <div class="demo-count">312</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Features -->
+<section id="features">
+  <p class="section-label">Features</p>
+  <h2>Count anything,<br />automatically or by hand</h2>
+  <div class="features">
+    <div class="feature-card">
+      <div class="feature-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      </div>
+      <h3>Manual tap counters</h3>
+      <p>Classic lap-counter style: big +/− buttons, a reset, and an adjustable step size per counter.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18.4 8.6 12 15l-3-3-4 4"/></svg>
+      </div>
+      <h3>Automatic vault stats</h3>
+      <p>Switch a counter to automatic and it tracks a live number instead: notes, links, tags, or attachments.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+      </div>
+      <h3>Day streak</h3>
+      <p>Count consecutive days you created at least one new note — a built-in nudge to keep showing up in your vault.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="6" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="6" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="18" r="1"/></svg>
+      </div>
+      <h3>Drag to reorder</h3>
+      <p>Grab a counter by its handle and drop it where you want — the order is saved automatically.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 12h8"/></svg>
+      </div>
+      <h3>As many as you want</h3>
+      <p>No limit on how many counters you keep — mix manual and automatic ones freely in the same panel.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M2 12h20"/></svg>
+      </div>
+      <h3>Lightweight</h3>
+      <p>No external dependencies, everything saved through Obsidian's own plugin storage.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Metrics -->
+<section id="metrics">
+  <p class="section-label">Automatic metrics</p>
+  <h2>Pick what a counter should track</h2>
+  <div class="styles-grid">
+
+    <div class="style-card">
+      <div class="style-name">Notes in vault <span class="style-tag">Auto</span></div>
+      <div class="style-desc">Total number of markdown notes in the vault.</div>
+    </div>
+
+    <div class="style-card">
+      <div class="style-name">Links in vault <span class="style-tag">Auto</span></div>
+      <div class="style-desc">Sum of all resolved links between notes.</div>
+    </div>
+
+    <div class="style-card">
+      <div class="style-name">Tags used (total) <span class="style-tag">Auto</span></div>
+      <div class="style-desc">Total tag occurrences across every note.</div>
+    </div>
+
+    <div class="style-card">
+      <div class="style-name">Attachments in vault <span class="style-tag">Auto</span></div>
+      <div class="style-desc">Non-markdown files: images, PDFs, and more.</div>
+    </div>
+
+    <div class="style-card">
+      <div class="style-name">Day streak <span class="style-tag">Auto</span></div>
+      <div class="style-desc">Consecutive days with at least one new note created.</div>
+    </div>
+
+  </div>
+</section>
+
+<!-- Install -->
+<section id="install">
+  <p class="section-label">Installation</p>
+  <h2>Get started in seconds</h2>
+  <div class="install-grid" style="grid-template-columns: 1fr;">
+    <div class="install-card">
+      <h3>Manual</h3>
+      <ol>
+        <li>Download <code>main.js</code>, <code>manifest.json</code>, <code>styles.css</code> from the <a href="https://github.com/30jannik06/Obsidian-Counter/releases/latest">latest release</a></li>
+        <li>Copy to <code>.obsidian/plugins/obsidian-counter/</code> in your vault</li>
+        <li>Enable <strong>Counter</strong> in Settings → Community Plugins</li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<!-- Dev -->
+<section id="dev">
+  <p class="section-label">Development</p>
+  <h2>Built with TypeScript</h2>
+  <div class="code-block">
+    <div><span class="comment"># Clone and install</span></div>
+    <div><span class="cmd">git clone</span> <span class="arg">https://github.com/30jannik06/Obsidian-Counter</span></div>
+    <div><span class="cmd">cd</span> Obsidian-Counter && <span class="cmd">npm install</span></div>
+    <br/>
+    <div><span class="comment"># Development</span></div>
+    <div><span class="cmd">npm run dev</span>     <span class="comment"># watch mode</span></div>
+    <div><span class="cmd">npm run build</span>   <span class="comment"># production build</span></div>
+    <br/>
+    <div><span class="comment"># Release a new version</span></div>
+    <div><span class="cmd">npm run version</span> <span class="comment"># bumps manifest.json + versions.json</span></div>
+    <div><span class="cmd">git tag</span> <span class="arg">1.1.0</span> && <span class="cmd">git push --tags</span></div>
+  </div>
+</section>
+
+<!-- Changelog -->
+<section id="changelog" class="changelog">
+  <p class="section-label">Changelog</p>
+  <h2>What's new</h2>
+
+  <div class="changelog-release">
+    <div class="changelog-header">
+      <span class="changelog-version">1.0.0</span>
+      <span class="changelog-date">2026-10-21</span>
+      <span class="changelog-tag">Latest</span>
+    </div>
+    <div class="changelog-body">
+      <div class="changelog-group">
+        <div class="changelog-group-label">Added</div>
+        <ul class="changelog-items">
+          <li>Sidebar panel with unlimited tally counters</li>
+          <li>Manual mode: +/− buttons with adjustable step, reset, rename, delete</li>
+          <li>Automatic mode: live vault stats instead of manual taps</li>
+          <li>Auto metrics: Notes in vault, Links in vault, Tags used, Attachments in vault</li>
+          <li>Auto metric: Day streak of note creation</li>
+          <li>Drag-to-reorder counters via a drag handle</li>
+          <li>Live refresh of automatic counters on vault changes</li>
+          <li>GitHub Actions release workflow</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>
+    Counter is open source under the <a href="https://github.com/30jannik06/Obsidian-Counter/blob/main/LICENSE">MIT License</a> ·
+    Built by <a href="https://github.com/30jannik06">30jannik06</a> ·
+    <a href="https://github.com/30jannik06/Obsidian-Counter">GitHub</a>
+  </p>
+</footer>
+
+</body>
+</html>
