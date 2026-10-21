@@ -10,7 +10,7 @@ Docs & download: https://30jannik06.github.io/Obsidian-Counter/
 
 1. `npm install`
 2. `npm run build` (or `npm run dev` for watch mode)
-3. Make sure this folder sits at `<vault>/.obsidian/plugins/tally-counter/`
+3. Make sure this folder sits at `<vault>/.obsidian/plugins/custom-counter/`
 4. Reload Obsidian, enable "Counter" in Settings → Community plugins
 
 ## Use
