@@ -2,7 +2,7 @@
   "id": "custom-counter",
   "name": "Custom Counter",
   "version": "1.0.0",
-  "minAppVersion": "1.4.0",
+  "minAppVersion": "1.7.2",
   "description": "Simple tally counters in the sidebar — like a lap counter, for anything you want to track.",
   "author": "30jannik06",
   "authorUrl": "https://github.com/30jannik06",

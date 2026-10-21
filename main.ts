@@ -81,10 +81,10 @@ function computeAutoValue(app: App, metric: AutoMetric | undefined): number {
 }
 
 class NameModal extends Modal {
-	private onSubmit: (name: string) => void;
+	private onSubmit: (name: string) => void | Promise<void>;
 	private value: string;
 
-	constructor(app: App, defaultValue: string, title: string, onSubmit: (name: string) => void) {
+	constructor(app: App, defaultValue: string, title: string, onSubmit: (name: string) => void | Promise<void>) {
 		super(app);
 		this.value = defaultValue;
 		this.onSubmit = onSubmit;
@@ -126,7 +126,7 @@ class NameModal extends Modal {
 			new Notice("Name cannot be empty");
 			return;
 		}
-		this.onSubmit(trimmed);
+		void this.onSubmit(trimmed);
 		this.close();
 	}
 
@@ -142,13 +142,13 @@ interface NewCounterResult {
 }
 
 class NewCounterModal extends Modal {
-	private onSubmit: (result: NewCounterResult) => void;
+	private onSubmit: (result: NewCounterResult) => void | Promise<void>;
 	private name = "";
 	private mode: CounterMode = "manual";
 	private metric: AutoMetric = "notes";
 	private metricSettingEl: Setting | null = null;
 
-	constructor(app: App, onSubmit: (result: NewCounterResult) => void) {
+	constructor(app: App, onSubmit: (result: NewCounterResult) => void | Promise<void>) {
 		super(app);
 		this.onSubmit = onSubmit;
 		this.titleEl.setText("New counter");
@@ -212,7 +212,7 @@ class NewCounterModal extends Modal {
 			new Notice("Name cannot be empty");
 			return;
 		}
-		this.onSubmit({ name: trimmed, mode: this.mode, metric: this.metric });
+		void this.onSubmit({ name: trimmed, mode: this.mode, metric: this.metric });
 		this.close();
 	}
 
@@ -256,7 +256,7 @@ class CounterView extends ItemView {
 
 		const header = container.createDiv({ cls: "counter-view-header" });
 		header.createEl("h4", { text: "Counters" });
-		const addBtn = header.createEl("button", { cls: "counter-add-btn", text: "+ Add counter" });
+		const addBtn = header.createEl("button", { cls: "counter-add-btn", text: "+ add counter" });
 		addBtn.addEventListener("click", () => {
 			new NewCounterModal(this.app, async ({ name, mode, metric }) => {
 				const newCounter: CounterItem = { id: makeId(), name, count: 0, step: 1, mode };
@@ -300,21 +300,23 @@ class CounterView extends ItemView {
 			card.removeClass("counter-drag-over");
 		});
 
-		card.addEventListener("drop", async (evt) => {
-			evt.preventDefault();
-			card.removeClass("counter-drag-over");
-			const draggedId = evt.dataTransfer?.getData("text/plain");
-			if (!draggedId || draggedId === counter.id) return;
+		card.addEventListener("drop", (evt) => {
+			void (async () => {
+				evt.preventDefault();
+				card.removeClass("counter-drag-over");
+				const draggedId = evt.dataTransfer?.getData("text/plain");
+				if (!draggedId || draggedId === counter.id) return;
 
-			const counters = this.plugin.settings.counters;
-			const fromIndex = counters.findIndex((c) => c.id === draggedId);
-			const toIndex = counters.findIndex((c) => c.id === counter.id);
-			if (fromIndex === -1 || toIndex === -1) return;
+				const counters = this.plugin.settings.counters;
+				const fromIndex = counters.findIndex((c) => c.id === draggedId);
+				const toIndex = counters.findIndex((c) => c.id === counter.id);
+				if (fromIndex === -1 || toIndex === -1) return;
 
-			const [moved] = counters.splice(fromIndex, 1);
-			counters.splice(toIndex, 0, moved);
-			await this.plugin.saveSettings();
-			this.render();
+				const [moved] = counters.splice(fromIndex, 1);
+				counters.splice(toIndex, 0, moved);
+				await this.plugin.saveSettings();
+				this.render();
+			})();
 		});
 	}
 
@@ -324,9 +326,9 @@ class CounterView extends ItemView {
 		this.makeDraggable(card, counter);
 
 		const titleRow = card.createDiv({ cls: "counter-card-title-row" });
-		const dragHandle = titleRow.createEl("span", { cls: "counter-drag-handle", text: "⠿" });
+		const dragHandle = titleRow.createSpan({ cls: "counter-drag-handle", text: "⠿" });
 		dragHandle.setAttribute("aria-label", "Drag to reorder");
-		const title = titleRow.createEl("span", { cls: "counter-card-title", text: counter.name });
+		const title = titleRow.createSpan({ cls: "counter-card-title", text: counter.name });
 		title.addEventListener("click", () => {
 			new NameModal(this.app, counter.name, "Rename counter", async (name) => {
 				counter.name = name;
@@ -337,10 +339,12 @@ class CounterView extends ItemView {
 
 		const deleteBtn = titleRow.createEl("button", { cls: "counter-icon-btn counter-delete-btn", text: "✕" });
 		deleteBtn.setAttribute("aria-label", "Delete counter");
-		deleteBtn.addEventListener("click", async () => {
-			this.plugin.settings.counters = this.plugin.settings.counters.filter((c) => c.id !== counter.id);
-			await this.plugin.saveSettings();
-			this.render();
+		deleteBtn.addEventListener("click", () => {
+			void (async () => {
+				this.plugin.settings.counters = this.plugin.settings.counters.filter((c) => c.id !== counter.id);
+				await this.plugin.saveSettings();
+				this.render();
+			})();
 		});
 
 		if (counter.mode === "auto") {
@@ -349,7 +353,7 @@ class CounterView extends ItemView {
 
 		const countRow = card.createDiv({ cls: "counter-count-row" });
 		const liveValue = counter.mode === "auto" ? computeAutoValue(this.app, counter.metric) : counter.count;
-		const countDisplay = countRow.createEl("span", { cls: "counter-count-display", text: String(liveValue) });
+		const countDisplay = countRow.createSpan({ cls: "counter-count-display", text: String(liveValue) });
 
 		if (counter.mode === "auto") {
 			return;
@@ -358,36 +362,36 @@ class CounterView extends ItemView {
 		const btnRow = card.createDiv({ cls: "counter-btn-row" });
 
 		const minusBtn = btnRow.createEl("button", { cls: "counter-btn counter-minus-btn", text: "−" });
-		minusBtn.addEventListener("click", async () => {
+		minusBtn.addEventListener("click", () => {
 			counter.count -= counter.step;
 			countDisplay.setText(String(counter.count));
-			await this.plugin.saveSettings();
+			void this.plugin.saveSettings();
 		});
 
 		const plusBtn = btnRow.createEl("button", { cls: "counter-btn counter-plus-btn", text: "+" });
-		plusBtn.addEventListener("click", async () => {
+		plusBtn.addEventListener("click", () => {
 			counter.count += counter.step;
 			countDisplay.setText(String(counter.count));
-			await this.plugin.saveSettings();
+			void this.plugin.saveSettings();
 		});
 
 		const resetBtn = btnRow.createEl("button", { cls: "counter-btn counter-reset-btn", text: "⟲" });
 		resetBtn.setAttribute("aria-label", "Reset to 0");
-		resetBtn.addEventListener("click", async () => {
+		resetBtn.addEventListener("click", () => {
 			counter.count = 0;
 			countDisplay.setText(String(counter.count));
-			await this.plugin.saveSettings();
+			void this.plugin.saveSettings();
 		});
 
 		const stepRow = card.createDiv({ cls: "counter-step-row" });
-		stepRow.createEl("span", { cls: "counter-step-label", text: "Step" });
-		const stepInput = stepRow.createEl("input", { cls: "counter-step-input", type: "number" }) as HTMLInputElement;
+		stepRow.createSpan({ cls: "counter-step-label", text: "Step" });
+		const stepInput = stepRow.createEl("input", { cls: "counter-step-input", type: "number" });
 		stepInput.value = String(counter.step);
-		stepInput.addEventListener("change", async () => {
+		stepInput.addEventListener("change", () => {
 			const parsed = parseInt(stepInput.value, 10);
 			counter.step = Number.isFinite(parsed) && parsed !== 0 ? parsed : 1;
 			stepInput.value = String(counter.step);
-			await this.plugin.saveSettings();
+			void this.plugin.saveSettings();
 		});
 	}
 }
@@ -401,7 +405,7 @@ export default class CounterPlugin extends Plugin {
 		this.registerView(VIEW_TYPE_COUNTER, (leaf) => new CounterView(leaf, this));
 
 		this.addRibbonIcon("plus-circle", "Open counters", () => {
-			this.activateView();
+			void this.activateView();
 		});
 
 		this.addCommand({
@@ -446,7 +450,7 @@ export default class CounterPlugin extends Plugin {
 		}
 
 		if (leaf) {
-			workspace.revealLeaf(leaf);
+			await workspace.revealLeaf(leaf);
 		}
 	}
 
@@ -459,7 +463,8 @@ export default class CounterPlugin extends Plugin {
 	}
 
 	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+		const saved = (await this.loadData()) as Partial<CounterPluginSettings> | null;
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, saved);
 		for (const counter of this.settings.counters) {
 			if (!counter.mode) counter.mode = "manual";
 		}
