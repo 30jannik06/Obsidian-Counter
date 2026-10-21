@@ -1,6 +1,6 @@
 {
   "name": "obsidian-counter",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Simple tally counters in the sidebar for Obsidian",
   "main": "main.js",
   "scripts": {
